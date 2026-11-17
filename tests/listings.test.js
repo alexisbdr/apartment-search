@@ -91,7 +91,7 @@ test('only an exact Brooklyn house number and street gets a pin', async () => {
   });
   assert.deepEqual(place, expected);
   assert.equal(isMapped(place), true);
-  assert.equal(isMapped({ longitude: -73.956872, latitude: 40.717304 }), false);
+  assert.equal(isMapped({ longitude: -73.956872, latitude: 40.717304 }), true);
   assert.deepEqual(await listingLocation('200 Lafayette Street, Manhattan', null, () => assert.fail()), {
     latitude: null, longitude: null,
   });

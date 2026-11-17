@@ -1,6 +1,6 @@
 import { listingLink } from './listings.js';
 
-const mapBounds = { west: -74.013, east: -73.919, south: 40.636, north: 40.713 };
+const mapBounds = { west: -74.013, east: -73.919, south: 40.636, north: 40.739 };
 const geosearch = 'https://geosearch.planninglabs.nyc/v2/search';
 
 const streetTypes = {

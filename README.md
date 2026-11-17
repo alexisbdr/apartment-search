@@ -1,6 +1,6 @@
 # Brooklyn Apartment Search
 
-A listing board and the interactive Brooklyn commute map. The map covers Fort Greene, Clinton Hill, Prospect Heights, Bed-Stuy, and the Brooklyn F corridor from York Street to Church Avenue.
+A listing board and the interactive Brooklyn commute map. The map covers Fort Greene, Clinton Hill, Prospect Heights, Bed-Stuy, Brooklyn Heights, Williamsburg, and the Brooklyn F corridor from York Street to Church Avenue.
 
 ## Run locally
 
