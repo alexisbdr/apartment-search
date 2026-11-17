@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ArrowUpRight, Building2, LayoutGrid, LockKeyhole, Map, Monitor } from 'lucide-react';
+import { Building2, LayoutGrid, LockKeyhole, Map, Monitor } from 'lucide-react';
 import { Board } from './board.jsx';
 import { boardBackend } from './storage.js';
+import { listingLink, listingTitle, statuses } from './listings.js';
+import { isMapped } from './locations.js';
+import { useBoard } from './use-board.js';
 import './styles.css';
 
 const backend = boardBackend(import.meta.env);
@@ -44,7 +47,7 @@ function SignIn({ client }) {
   );
 }
 
-function SharedBoard({ client, store }) {
+function SharedBoard({ client, store, route }) {
   const [session, setSession] = useState(undefined);
   const [access, setAccess] = useState(null);
   const [signOutError, setSignOutError] = useState('');
@@ -86,6 +89,10 @@ function SharedBoard({ client, store }) {
     }
   }
 
+  if (route.view === 'map' && (!memberId || access?.memberId !== memberId || !access.allowed)) {
+    return <CommuteMap signInRequired />;
+  }
+
   if (session === undefined) return <p className="notice" role="status">Checking your session…</p>;
   if (session === null) return <SignIn client={client} />;
   if (access?.memberId !== memberId) return <p className="notice" role="status">Checking board access…</p>;
@@ -99,36 +106,84 @@ function SharedBoard({ client, store }) {
 
   return <>
     {signOutError && <p className="notice error-text" role="alert">{signOutError}</p>}
-    <Board key={memberId} store={store} mode="shared" onSignOut={signOut} />
+    <Workspace key={memberId} store={store} route={route} onSignOut={signOut} />
   </>;
 }
 
-function CommuteMap() {
+const emptyListings = [];
+const statusLabels = Object.fromEntries(statuses);
+
+function CommuteMap({ listings = emptyListings, focusListingId, signInRequired }) {
+  const iframe = useRef(null);
+  const pins = listings.filter(isMapped);
+
+  const sync = useCallback(() => {
+    const records = listings.filter(isMapped).flatMap(listing => {
+      try {
+        return [{
+          id: listing.id,
+          title: listingTitle(listing),
+          address: listing.street_address,
+          url: listingLink(listing.url).url,
+          rent: listing.monthly_rent,
+          status: statusLabels[listing.status],
+          latitude: listing.latitude,
+          longitude: listing.longitude,
+        }];
+      } catch {
+        return [];
+      }
+    });
+
+    iframe.current?.contentWindow?.postMessage({
+      type: 'brooklyn-listings:sync',
+      pins: records,
+      focusListingId,
+    }, window.location.origin);
+  }, [listings, focusListingId]);
+
+  useEffect(() => sync(), [sync]);
+
   return (
     <>
       <div className="page-heading">
         <div>
           <h1>Commute map</h1>
-          <p>Compare reported street incidents and subway options to Penn Station.</p>
+          <p>{signInRequired ? 'Sign in from Listings to see your pins.'
+            : pins.length ? pins.length + (pins.length === 1 ? ' listing on the map. ' : ' listings on the map. ') + 'Select a pin for details.'
+            : 'Save a Brooklyn street address on a listing to place its pin.'}</p>
         </div>
-        <a className="button secondary" href={mapPath} target="_blank" rel="noopener noreferrer">
-          Open full map <ArrowUpRight size={16} aria-hidden="true" />
-        </a>
+        {!!pins.length && <button className="button secondary" type="button" onClick={() => {
+          iframe.current?.contentWindow?.postMessage({ type: 'brooklyn-listings:fit' }, window.location.origin);
+        }}>Show listings</button>}
       </div>
-      <iframe className="commute-map" src={mapPath} title="Brooklyn safety and the Penn Station commute" />
+      <iframe ref={iframe} className="commute-map" src={mapPath}
+        title="Brooklyn safety, subway commutes and listing locations" onLoad={sync} />
     </>
   );
 }
 
-function currentView() {
-  return window.location.hash === '#map' ? 'map' : 'board';
+function Workspace({ store, route, onSignOut }) {
+  const board = useBoard(store);
+  return route.view === 'map'
+    ? <CommuteMap listings={board.listings} focusListingId={route.listingId} />
+    : <Board board={board} onSignOut={onSignOut} />;
+}
+
+function currentRoute() {
+  const path = window.location.hash.slice(1);
+  if (path === 'map' || path.startsWith('map/')) {
+    return { view: 'map', listingId: path.slice(4) || null };
+  }
+  return { view: 'board', listingId: null };
 }
 
 function App() {
-  const [view, setView] = useState(currentView);
+  const [route, setRoute] = useState(currentRoute);
+  const { view } = route;
 
   useEffect(() => {
-    const onChange = () => setView(currentView());
+    const onChange = () => setRoute(currentRoute());
     window.addEventListener('hashchange', onChange);
     return () => window.removeEventListener('hashchange', onChange);
   }, []);
@@ -158,9 +213,9 @@ function App() {
         </div>
       </header>
       <main className="app-content">
-        {view === 'map' ? <CommuteMap />
-          : backend.mode === 'shared' ? <SharedBoard client={backend.client} store={backend.store} />
-          : backend.mode === 'local' ? <Board store={backend.store} mode="local" />
+        {backend.mode === 'shared' ? <SharedBoard client={backend.client} store={backend.store} route={route} />
+          : backend.mode === 'local' ? <Workspace store={backend.store} route={route} />
+          : view === 'map' ? <CommuteMap />
           : <div className="notice" role="alert">{backend.message}</div>}
       </main>
     </>

@@ -190,6 +190,18 @@ h1 { font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.08; letter-spacing: -.
   color: var(--muted);
 }
 .icon-button:hover:not(:disabled) { background: #edece4; }
+.pin-link {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding-block: 4px;
+  color: var(--green);
+  font-size: .85rem;
+  font-weight: 620;
+}
+.pin-link:hover { text-decoration: underline; }
+.pin-missing { color: var(--muted); font-size: .8rem; line-height: 1.4; }
 .status-control { margin-top: 6px; }
 .status-control select { width: 100%; min-height: 37px; font-size: .82rem; }
 

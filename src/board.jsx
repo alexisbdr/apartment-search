@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Bookmark, ClipboardCheck, MessageSquare, Pencil, Plus, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowUpRight, Bookmark, ClipboardCheck, MapPin, MessageSquare, Pencil, Plus, X } from 'lucide-react';
 import { listingDraft, listingLink, listingTitle, providers, stages, statuses } from './listings.js';
-import { storageKey } from './storage.js';
+import { addressFromLink, isMapped, listingLocation } from './locations.js';
 
 const icons = { interested: Bookmark, contacted: MessageSquare, applications: ClipboardCheck };
 const emptyCopy = {
@@ -33,6 +33,7 @@ function ListingCard({ listing, canEdit, onEdit, onMove }) {
         </button>
       </div>
       <h3>{link ? <a href={link} target="_blank" rel="noopener noreferrer">{title}<ArrowUpRight size={15} aria-hidden="true" /></a> : title}</h3>
+      {listing.street_address && listing.street_address !== title && <p className="listing-location">{listing.street_address}</p>}
       {(listing.neighborhood || listing.bedrooms !== null) && (
         <p className="listing-location">
           {[
@@ -45,6 +46,11 @@ function ListingCard({ listing, canEdit, onEdit, onMove }) {
         <p className="listing-rent">{dollars.format(listing.monthly_rent)} <span>/mo</span></p>
       )}
       {listing.notes && <p className="listing-notes">{listing.notes}</p>}
+      {isMapped(listing) ? (
+        <a className="pin-link" href={'#map/' + listing.id}><MapPin size={15} aria-hidden="true" /> View on map</a>
+      ) : <p className="pin-missing">{listing.street_address
+        ? (Number.isFinite(listing.latitude) ? 'Outside commute map coverage' : 'Edit the street address to retry the pin')
+        : 'Add a street address to place a pin'}</p>}
       <div className="status-control">
         <select aria-label={'Status for ' + title} value={listing.status}
           onChange={event => onMove(listing, event.target.value)} disabled={!canEdit}>
@@ -105,8 +111,14 @@ function ListingDialog({ listing, pending, onClose, onSave, onRemove }) {
               maxLength={2048} defaultValue={listing?.url} required />
           </label>
           <label className="span-two">
-            Address or nickname <span className="optional">Optional</span>
+            Listing name <span className="optional">Optional</span>
             <input name="title" maxLength={160} defaultValue={listing?.title} placeholder="e.g. Fulton St, Apt 3B" />
+          </label>
+          <label className="span-two">
+            Brooklyn street address
+            <input name="street_address" maxLength={200} defaultValue={listing?.street_address}
+              placeholder="e.g. 200 Lafayette Ave" />
+            <span className="optional">The app looks up the address with NYC Planning when you save.</span>
           </label>
           <label className="span-two">
             Neighborhood
@@ -141,74 +153,30 @@ function ListingDialog({ listing, pending, onClose, onSave, onRemove }) {
   );
 }
 
-export function Board({ store, mode, onSignOut }) {
-  const [listings, setListings] = useState([]);
-  const [loaded, setLoaded] = useState(false);
-  const [loadError, setLoadError] = useState('');
+export function Board({ board, onSignOut }) {
+  const { listings, loaded, loadError, pending, refresh, mutate, store } = board;
   const [actionError, setActionError] = useState('');
   const [dialog, setDialog] = useState(null);
-  const [pending, setPending] = useState(false);
-  const refreshId = useRef(0);
-  const mutating = useRef(false);
-
-  const refresh = useCallback(async () => {
-    if (mutating.current) return;
-    const id = ++refreshId.current;
-    try {
-      const rows = await store.list();
-      if (id !== refreshId.current) return;
-      setListings(rows);
-      setLoaded(true);
-      setLoadError('');
-    } catch (error) {
-      if (id === refreshId.current) setLoadError(error.message);
-    }
-  }, [store]);
-
-  useEffect(() => {
-    refresh();
-    const storageChanged = event => {
-      if (event.key === storageKey || event.key === null) refresh();
-    };
-    window.addEventListener('focus', refresh);
-    if (mode === 'local') window.addEventListener('storage', storageChanged);
-    return () => {
-      refreshId.current += 1;
-      window.removeEventListener('focus', refresh);
-      window.removeEventListener('storage', storageChanged);
-    };
-  }, [mode, refresh]);
-
-  async function mutate(operation, apply) {
-    if (mutating.current) throw new Error('A change is already being saved.');
-    mutating.current = true;
-    refreshId.current += 1;
-    setPending(true);
-    setActionError('');
-    try {
-      const result = await operation();
-      setListings(rows => apply(rows, result));
-    } finally {
-      mutating.current = false;
-      setPending(false);
-      void refresh();
-    }
-  }
 
   async function save(listing, draft) {
-    await mutate(
-      () => listing ? store.update(listing, draft) : store.add(draft),
-      (rows, saved) => listing ? rows.map(row => row.id === saved.id ? saved : row) : [saved, ...rows],
-    );
+    setActionError('');
+    await mutate(async () => {
+      const address = draft.street_address || (!listing ? addressFromLink(draft.url) : '');
+      const location = await listingLocation(address, listing);
+      const record = { ...draft, street_address: address, ...location };
+      return listing ? store.update(listing, record) : store.add(record);
+    }, (rows, saved) => listing ? rows.map(row => row.id === saved.id ? saved : row) : [saved, ...rows]);
     setDialog(null);
   }
 
   async function remove(listing) {
+    setActionError('');
     await mutate(() => store.remove(listing), rows => rows.filter(row => row.id !== listing.id));
     setDialog(null);
   }
 
   async function move(listing, status) {
+    setActionError('');
     try {
       await mutate(
         () => store.update(listing, { status }),

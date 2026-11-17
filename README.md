@@ -11,7 +11,9 @@ npm ci
 npm run dev
 ```
 
-Click **Add listing** and paste an individual StreetEasy or Zillow property link. Add an address or nickname, neighborhood, rent, bedroom count, and notes as needed. Listings start in **Interested**. Use each card’s status menu to move it to **Contacted**, **Applied**, or **Denied**. The last two statuses share a column.
+Click **Add listing** and paste an individual StreetEasy or Zillow property link. Add the street address, neighborhood, rent, bedroom count, and notes as needed. Listings start in **Interested**. Use each card’s status menu to move it to **Contacted**, **Applied**, or **Denied**. The last two statuses share a column.
+
+Listings with matched addresses appear on **Commute map** as soon as they are saved. Click a pin for a small listing pop-up or use **View on map** from a card to go directly to it. The app looks up Brooklyn street addresses using [NYC Planning GeoSearch](https://geosearch.planninglabs.nyc/docs/). It can suggest a location from a link when the link contains a numbered street address. Listings outside the map coverage or without a matched address remain on the board. To place a pin for an existing listing, edit its street address and save.
 
 By default the board saves in the current browser. The map works without a database and is bundled in `public/commute-map.html`. The app opens provider links in a new tab and uses the details you enter. Duplicate detection uses the provider listing ID or building and unit where the URL contains it.
 
@@ -24,7 +26,7 @@ npm run build
 
 The project supports a single shared board with Supabase Auth and Postgres.
 
-1. Create a Supabase project and run the SQL in [the board migration](supabase/migrations/20261117000000_create_listing_board.sql) using the SQL Editor.
+1. Create a Supabase project and run the SQL in [both database migrations](supabase/migrations) in filename order using the SQL Editor.
 2. In Supabase Authentication, create confirmed email/password accounts for the board members. Give each person their own password. Use the dashboard to create and confirm the accounts if you want to avoid email delivery setup.
 3. Add the two accounts to the board in the SQL Editor. Use the actual account emails in place of the example values.
 
@@ -36,7 +38,7 @@ The project supports a single shared board with Supabase Auth and Postgres.
    ```
 
 4. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from the Supabase project connection settings. Use `.env.local` locally and add both variables to the Vercel project when deploying. Use a publishable key. Keep administrative and secret keys outside the frontend.
-5. Sign in on each device. Open or refocus the board to refresh changes from the other account.
+5. Sign in on each device. Supabase Realtime syncs shared-board changes. Refocusing the app also refreshes the board.
 
 Database policies restrict the board to the approved members. The commute map is public-source content bundled with the frontend. Device-only listings and shared listings use separate storage.
 

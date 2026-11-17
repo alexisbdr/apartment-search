@@ -85,6 +85,7 @@ export function listingDraft(fields) {
     ...link,
     title: String(fields.get('title') ?? '').trim(),
     neighborhood: String(fields.get('neighborhood') ?? '').trim(),
+    street_address: String(fields.get('street_address') ?? '').trim(),
     monthly_rent: optionalInteger(fields, 'monthly_rent', 'Monthly rent', 1000000),
     bedrooms: optionalInteger(fields, 'bedrooms', 'Bedrooms', 30),
     notes: String(fields.get('notes') ?? '').trim(),
@@ -98,7 +99,7 @@ export function listingTitle(listing) {
     : path[0] === 'homedetails' && path.length > 2 ? path[1]
     : path[0] === 'apartments' ? path[2]
     : '';
-  if (!slug) return providers[listing.source] + ' listing';
+  if (!slug) return listing.street_address || providers[listing.source] + ' listing';
 
   const display = slug.replace(/-/g, ' ').replace(/\b[a-z]/g, letter => letter.toUpperCase());
   return listing.source === 'streeteasy' ? display + ' #' + path[2] : display;

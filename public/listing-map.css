@@ -1,0 +1,65 @@
+#brooklyn-penn-map .listing-map-markers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+#brooklyn-penn-map .listing-map-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  appearance: none;
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--purple) 74%, var(--foreground));
+  color: var(--background);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--foreground) 50%, transparent);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 0;
+}
+#brooklyn-penn-map .listing-map-pin[aria-expanded="true"] { outline: 2px solid var(--foreground); }
+#brooklyn-penn-map .map-actions { z-index: 2; }
+#brooklyn-penn-map .listing-map-popup {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  gap: 5px;
+  width: max-content;
+  max-width: min(245px, calc(100% - 16px));
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 3px 15px color-mix(in srgb, var(--foreground) 20%, transparent);
+  overflow-wrap: anywhere;
+}
+#brooklyn-penn-map .listing-map-popup[hidden],
+#brooklyn-penn-map .listing-map-pin[hidden] { display: none; }
+#brooklyn-penn-map .listing-popup-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+#brooklyn-penn-map .listing-popup-title { font-weight: 600; }
+#brooklyn-penn-map .listing-popup-close {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 5px;
+  padding: 0;
+  background: var(--muted);
+  color: var(--foreground);
+  font: inherit;
+}
+#brooklyn-penn-map .listing-map-popup .form-select { width: 100%; }
+#brooklyn-penn-map .listing-map-popup a { width: fit-content; }
+@media (pointer: coarse) {
+  #brooklyn-penn-map .listing-popup-close { width: 32px; height: 32px; }
+}

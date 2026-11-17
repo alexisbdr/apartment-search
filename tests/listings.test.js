@@ -56,3 +56,43 @@ test('browser board persists stages and rejects duplicate and stale writes', asy
   await store.remove(denied);
   assert.deepEqual(await store.list(), []);
 });
+
+test('numbered building links suggest a Brooklyn street address', async () => {
+  const { addressFromLink } = await import('../src/locations.js');
+  assert.equal(addressFromLink('https://streeteasy.com/building/211-saint-marks-place-brooklyn/1a'), '211 Saint Marks Place');
+  assert.equal(addressFromLink('https://www.zillow.com/homedetails/200-Lafayette-Ave-APT-2-Brooklyn-NY/123456_zpid/'), '200 Lafayette Ave');
+  assert.equal(addressFromLink('https://www.zillow.com/apartments/brooklyn-ny/200-lafayette-ave/5YKkpW/'), '200 Lafayette Ave');
+  assert.equal(addressFromLink('https://streeteasy.com/rental/1234567'), '');
+});
+
+test('only an exact Brooklyn house number and street gets a pin', async () => {
+  const { findBrooklynAddress, isMapped, listingLocation } = await import('../src/locations.js');
+  const feature = (borough, house, street, coordinates) => ({
+    properties: { borough, housenumber: house, street },
+    geometry: { type: 'Point', coordinates },
+  });
+  const expected = { longitude: -73.968533, latitude: 40.687712 };
+  const brooklyn = feature('Brooklyn', '200', 'LAFAYETTE AVENUE', Object.values(expected));
+  const results = [
+    feature('Manhattan', '200', 'LAFAYETTE STREET', [-73.998267, 40.721438]),
+    feature('Brooklyn', '202', 'LAFAYETTE AVENUE', [-73.9683, 40.6878]),
+    brooklyn,
+  ];
+  assert.deepEqual(findBrooklynAddress('200 Lafayette Ave Apt 2', results), expected);
+  assert.equal(findBrooklynAddress('100 Lafayette Ave', results), null);
+  assert.equal(findBrooklynAddress('200 Lafayette Ave', [
+    ...results, feature('Brooklyn', '200', 'LAFAYETTE AVENUE', [-73.9696, 40.6881]),
+  ]), null);
+
+  const place = await listingLocation('200 Lafayette Ave, Apt 2', null, async url => {
+    assert.equal(url.hostname, 'geosearch.planninglabs.nyc');
+    assert.equal(url.searchParams.get('text'), '200 Lafayette Ave, Brooklyn, NY');
+    return { ok: true, json: async () => ({ features: results }) };
+  });
+  assert.deepEqual(place, expected);
+  assert.equal(isMapped(place), true);
+  assert.equal(isMapped({ longitude: -73.956872, latitude: 40.717304 }), false);
+  assert.deepEqual(await listingLocation('200 Lafayette Street, Manhattan', null, () => assert.fail()), {
+    latitude: null, longitude: null,
+  });
+});

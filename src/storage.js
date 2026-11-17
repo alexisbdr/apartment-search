@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { conflictError, duplicateError } from './listings.js';
 
 export const storageKey = 'brooklyn-apartment-search:listings:v1';
-const columns = 'id,source,source_key,url,title,neighborhood,monthly_rent,bedrooms,notes,status,created_at,updated_at';
+const columns = 'id,source,source_key,url,title,neighborhood,monthly_rent,bedrooms,notes,status,street_address,latitude,longitude,created_at,updated_at';
 
 function browserStorageError() {
   return new Error('The browser could not save or read listings. Check that site storage is enabled.');
@@ -50,6 +50,13 @@ export function browserStore(storage) {
   }
 
   return {
+    subscribe(notify) {
+      const changed = event => {
+        if (event.key === storageKey || event.key === null) notify();
+      };
+      window.addEventListener('storage', changed);
+      return () => window.removeEventListener('storage', changed);
+    },
     async list() {
       return read().sort((first, second) => second.created_at.localeCompare(first.created_at));
     },
@@ -88,6 +95,12 @@ function databaseResult({ data, error }) {
 
 export function sharedStore(client) {
   return {
+    subscribe(notify) {
+      const channel = client.channel('listing-board')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'listings' }, notify)
+        .subscribe(status => { if (status === 'SUBSCRIBED') notify(); });
+      return () => { void client.removeChannel(channel); };
+    },
     async list() {
       const rows = [];
       const pageSize = 200;
