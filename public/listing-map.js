@@ -69,6 +69,18 @@
         popup.append(units);
       }
 
+      if (listing.photo) {
+        const image = element('img', 'listing-popup-photo');
+        image.alt = 'Main photo from the listing';
+        image.referrerPolicy = 'no-referrer';
+        image.addEventListener('error', () => {
+          image.remove();
+          redraw();
+        }, { once: true });
+        image.src = listing.photo;
+        popup.append(image);
+      }
+
       if (listing.address && listing.address !== listing.title) {
         popup.append(element('div', 'text-small text-muted', listing.address));
       }

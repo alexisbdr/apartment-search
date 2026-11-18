@@ -29,7 +29,7 @@
   display: grid;
   gap: 5px;
   width: max-content;
-  max-width: min(245px, calc(100% - 16px));
+  max-width: min(260px, calc(100% - 16px));
   padding: 9px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -59,6 +59,14 @@
   font: inherit;
 }
 #brooklyn-penn-map .listing-map-popup .form-select { width: 100%; }
+#brooklyn-penn-map .listing-popup-photo {
+  display: block;
+  width: min(234px, 100%);
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 5px;
+  background: var(--muted);
+}
 #brooklyn-penn-map .listing-map-popup a { width: fit-content; }
 @media (pointer: coarse) {
   #brooklyn-penn-map .listing-popup-close { width: 32px; height: 32px; }

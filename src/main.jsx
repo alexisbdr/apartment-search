@@ -3,13 +3,37 @@ import { createRoot } from 'react-dom/client';
 import { Building2, LayoutGrid, LockKeyhole, Map, Monitor } from 'lucide-react';
 import { Board } from './board.jsx';
 import { boardBackend } from './storage.js';
-import { listingLink, listingTitle, statuses } from './listings.js';
+import { activeListing, listingLink, listingPhoto, listingTitle, statuses } from './listings.js';
 import { isMapped } from './locations.js';
 import { useBoard } from './use-board.js';
 import './styles.css';
 
 const backend = boardBackend(import.meta.env);
 const mapPath = import.meta.env.BASE_URL + 'commute-map.html';
+
+async function fetchListingDetails(client, url, signal) {
+  const { data: { session } } = await client.auth.getSession();
+  if (!session) throw new Error('Sign in again to look up listing details.');
+
+  let response;
+  let result;
+  try {
+    response = await fetch('/api/lookup-listing', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + session.access_token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+      signal,
+    });
+    result = await response.json();
+  } catch {
+    throw new Error('Automatic lookup is unavailable. You can enter the details by hand.');
+  }
+  if (!response.ok) throw new Error(result.error);
+  return result;
+}
 
 function SignIn({ client }) {
   const [busy, setBusy] = useState(false);
@@ -52,6 +76,7 @@ function SharedBoard({ client, store, route }) {
   const [access, setAccess] = useState(null);
   const [signOutError, setSignOutError] = useState('');
   const memberId = session?.user.id;
+  const lookup = useCallback((url, signal) => fetchListingDetails(client, url, signal), [client]);
 
   useEffect(() => {
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, current) => setSession(current));
@@ -106,25 +131,27 @@ function SharedBoard({ client, store, route }) {
 
   return <>
     {signOutError && <p className="notice error-text" role="alert">{signOutError}</p>}
-    <Workspace key={memberId} store={store} route={route} onSignOut={signOut} />
+    <Workspace key={memberId} store={store} route={route} onSignOut={signOut} lookup={lookup} />
   </>;
 }
 
 const emptyListings = [];
 const statusLabels = Object.fromEntries(statuses);
+const isVisiblePin = listing => activeListing(listing) && isMapped(listing);
 
 function CommuteMap({ listings = emptyListings, focusListingId, signInRequired }) {
   const iframe = useRef(null);
-  const pins = listings.filter(isMapped);
+  const pins = listings.filter(isVisiblePin);
 
   const sync = useCallback(() => {
-    const records = listings.filter(isMapped).flatMap(listing => {
+    const records = listings.filter(isVisiblePin).flatMap(listing => {
       try {
         return [{
           id: listing.id,
           title: listingTitle(listing),
           address: listing.street_address,
           url: listingLink(listing.url).url,
+          photo: listingPhoto(listing.image_url),
           rent: listing.monthly_rent,
           status: statusLabels[listing.status],
           latitude: listing.latitude,
@@ -163,11 +190,11 @@ function CommuteMap({ listings = emptyListings, focusListingId, signInRequired }
   );
 }
 
-function Workspace({ store, route, onSignOut }) {
+function Workspace({ store, route, onSignOut, lookup }) {
   const board = useBoard(store);
   return route.view === 'map'
     ? <CommuteMap listings={board.listings} focusListingId={route.listingId} />
-    : <Board board={board} onSignOut={onSignOut} />;
+    : <Board board={board} onSignOut={onSignOut} lookup={lookup} />;
 }
 
 function currentRoute() {

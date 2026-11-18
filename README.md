@@ -11,11 +11,11 @@ npm ci
 npm run dev
 ```
 
-Click **Add listing** and paste an individual StreetEasy or Zillow property link. Add the street address, neighborhood, rent, bedroom count, and notes as needed. Listings start in **Interested**. Use each card’s status menu to move it to **Contacted**, **Applied**, or **Denied**. The last two statuses share a column.
+Click **Add listing** and paste an individual StreetEasy or Zillow property link. Review the details and fill in anything missing. Listings start in **Interested**. Use the status menu to move a listing to **Contacted**, **Visited**, **Applied**, or **Denied**. Use **Move to trash** in the edit form to hide a listing and its map pin. **Restore** in the bottom-right Trash bin returns it to its previous stack.
 
 Listings with matched addresses appear on **Commute map** as soon as they are saved. Click a pin for a small listing pop-up or use **View on map** from a card to go directly to it. The app looks up Brooklyn street addresses using [NYC Planning GeoSearch](https://geosearch.planninglabs.nyc/docs/). It can suggest a location from a link when the link contains a numbered street address. Listings outside the map coverage or without a matched address remain on the board. To place a pin for an existing listing, edit its street address and save.
 
-By default the board saves in the current browser. The map works without a database and is bundled in `public/commute-map.html`. The app opens provider links in a new tab and uses the details you enter. Duplicate detection uses the provider listing ID or building and unit where the URL contains it.
+By default the board saves in the current browser. The map works without a database and is bundled in `public/commute-map.html`. When a listing has a photo URL, its pin pop-up shows the photo. Duplicate detection uses the provider listing ID or building and unit where the URL contains it.
 
 ```sh
 npm test
@@ -26,7 +26,7 @@ npm run build
 
 The project supports a single shared board with Supabase Auth and Postgres.
 
-1. Create a Supabase project and run the SQL in [both database migrations](supabase/migrations) in filename order using the SQL Editor.
+1. Create a Supabase project and run the SQL in the [database migrations](supabase/migrations) in filename order using the SQL Editor. When upgrading an existing board, apply only the new migrations. Apply the workflow migration before deploying the code that uses it.
 2. In Supabase Authentication, create confirmed email/password accounts for the board members. Give each person their own password. Use the dashboard to create and confirm the accounts if you want to avoid email delivery setup.
 3. Add the two accounts to the board in the SQL Editor. Use the actual account emails in place of the example values.
 
@@ -52,8 +52,11 @@ Database policies restrict the board to the approved members. The commute map is
 
 [Deploy Vite on Vercel](https://vercel.com/docs/frameworks/frontend/vite) · [Vercel Git integration](https://vercel.com/docs/git)
 
-## Future listing discovery
+## Automatic listing details and daily suggestions
 
-Start with rental searches saved on StreetEasy or Zillow and turn on their email alerts. Once you choose a mailbox to connect, read only the alerts you authorize, extract listing URLs, and show a shortlist for review. Reuse the board’s provider-level deduplication and require a deliberate save before a candidate enters **Interested**. A licensed provider feed is another option if its terms fit the project.
+1. Add a project API key from [OpenAI API Platform](https://platform.openai.com/api-keys) as the server-only `OPENAI_API_KEY` in Vercel's Production environment. Requests are billed to that key’s API project. The shared board uses OpenAI web and image search for published listing details. Missing or unverified details stay blank and can be entered by hand.
+2. Add a random `CRON_SECRET` in Production for Vercel's scheduled request. The scheduled job uses the integration’s `SUPABASE_SERVICE_ROLE_KEY` or a server-only `SUPABASE_SECRET_KEY` from the same Supabase project.
+3. Deploy. On the shared board, open **Suggestions → Daily search preferences**, choose neighborhoods, set your maximum rent and minimum bedrooms, and turn on daily matches. The search runs once a day at 15:00 UTC when enabled.
+4. Review suggested listings on the site. **Save to Interested** adds the listing to the main board and looks up its map pin. **Dismiss** moves it to Trash. The search can miss listings that aren’t indexed yet, and availability can change after a match appears.
 
-[StreetEasy saved searches](https://support.streeteasy.com/hc/en-us/articles/360024630671-StreetEasy-Search) · [Zillow saved-search alerts](https://zillow.zendesk.com/hc/en-us/articles/16115195331091-Email-types-consumers-can-receive) · [Zillow Terms of Use](https://www.zillow.com/corporate/terms-of-use/)
+[OpenAI Web Search](https://developers.openai.com/api/docs/guides/tools-web-search) · [Vercel Cron Jobs](https://vercel.com/docs/schedules/cron-jobs/manage-cron-jobs)

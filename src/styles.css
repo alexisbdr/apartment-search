@@ -115,7 +115,7 @@ h1 { font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.08; letter-spacing: -.
 .button.secondary { border: 1px solid var(--line); background: var(--paper); }
 .button.secondary:hover:not(:disabled) { background: #efefe8; }
 
-.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: start; padding-bottom: 52px; }
 .lane {
   min-height: 233px;
   padding: 16px;
@@ -126,6 +126,7 @@ h1 { font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.08; letter-spacing: -.
   --stage-fill: #deeadf;
 }
 .lane[data-stage="contacted"] { --stage-color: #385b77; --stage-fill: #dfe9ee; }
+.lane[data-stage="visited"] { --stage-color: #665475; --stage-fill: #eae2ef; }
 .lane[data-stage="applications"] { --stage-color: #755322; --stage-fill: #eee4d1; }
 
 .lane-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 16px; }
@@ -243,6 +244,35 @@ textarea { resize: vertical; }
 .listing-fields input, .listing-fields textarea, .gate input { font-size: 1rem; font-weight: 400; width: 100%; }
 .listing-fields .span-two { grid-column: 1 / -1; }
 .listing-fields .optional { grid-column: 1; font-size: .75rem; color: var(--muted); font-weight: 400; }
+.listing-fields .check-label { display: flex; align-items: center; gap: 8px; }
+.listing-fields input[type="checkbox"] { appearance: auto; width: auto; accent-color: var(--green); }
+.lookup-status { font-size: .83rem; color: var(--muted); }
+.lookup-status p { margin-top: 3px; }
+.dialog-actions .danger-text { display: inline-flex; align-items: center; gap: 6px; }
+.trash-button {
+  position: fixed;
+  z-index: 5;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  box-shadow: 0 3px 12px #1e322b1f;
+}
+.action-count { min-width: 1.4em; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.listing-drawer .dialog-heading, .listing-drawer .error-text { margin-bottom: 12px; }
+.listing-drawer .listing-card { background: #fafaf5; }
+.card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.search-settings { padding: 12px; margin-bottom: 14px; border: 1px solid var(--line); border-radius: 9px; }
+.search-settings summary { cursor: pointer; font-weight: 650; font-size: .91rem; }
+.search-settings form { margin-top: 14px; }
+.search-feedback { margin-top: 10px; color: var(--muted); font-size: .85rem; }
+.neighborhood-choices {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 8px 12px;
+  border: 0;
+  padding: 0;
+}
+.neighborhood-choices legend { margin-bottom: 6px; font-size: .87rem; font-weight: 650; }
 .dialog-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
 .dialog-actions > div { margin-left: auto; }
 .text-button { padding: 8px 0; border: 0; background: transparent; font-size: .85rem; text-decoration: underline; }
@@ -272,7 +302,7 @@ form .error-text { margin-top: 10px; font-size: .9rem; }
 @media (max-width: 850px) {
   .header-content, .app-content { width: calc(100% - 36px); }
   .header-content { flex-wrap: wrap; gap: 7px 16px; padding-block: 10px; }
-  .board { gap: 10px; }
+  .board { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .lane { padding: 11px; }
 }
 
