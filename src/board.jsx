@@ -47,6 +47,15 @@ function ListingCard({ listing, canEdit, onEdit, onMove, actions }) {
         <p className="listing-rent">{dollars.format(listing.monthly_rent)} <span>/mo</span></p>
       )}
       {listing.notes && <p className="listing-notes">{listing.notes}</p>}
+      {listing.availability_checked_at && <p className="listing-availability"
+        title={listing.availability_reason}>
+        {listing.availability_status === 'removed' ? 'Removed from the provider'
+          : listing.availability_status === 'active' ? 'Availability confirmed'
+          : 'Availability unconfirmed'}
+        {' · ' + new Date(listing.availability_checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+      </p>}
+      {listing.trashed_at && listing.availability_status === 'removed' &&
+        <p className="listing-location">{listing.availability_reason}</p>}
       {onMove && (isMapped(listing) ? (
         <a className="pin-link" href={'#map/' + listing.id}><MapPin size={15} aria-hidden="true" /> View on map</a>
       ) : <p className="pin-missing">{listing.street_address
@@ -290,6 +299,11 @@ export function Board({ board, onSignOut, lookup }) {
       const address = draft.street_address || (!listing ? addressFromLink(draft.url) : '');
       const location = await listingLocation(address, listing);
       const record = { ...draft, street_address: address, ...location };
+      if (listing && listing.url !== draft.url) {
+        record.availability_status = 'unknown';
+        record.availability_reason = '';
+        record.availability_checked_at = null;
+      }
       return listing ? store.update(listing, record) : store.add(record);
     }, (rows, saved) => listing ? rows.map(row => row.id === saved.id ? saved : row) : [saved, ...rows]);
     setDialog(null);
@@ -304,7 +318,12 @@ export function Board({ board, onSignOut, lookup }) {
   async function updateListing(listing, action) {
     await mutate(async () => {
       if (action === 'trash') return store.update(listing, { trashed_at: new Date().toISOString() });
-      if (action === 'restore') return store.update(listing, { trashed_at: null });
+      if (action === 'restore') return store.update(listing, {
+        trashed_at: null,
+        availability_status: 'unknown',
+        availability_reason: 'Restored for review. The next nightly scan will check this listing again.',
+        availability_checked_at: new Date().toISOString(),
+      });
       const address = listing.street_address || addressFromLink(listing.url);
       const location = await listingLocation(address, listing);
       return store.update(listing, { status: 'interested', street_address: address, ...location });

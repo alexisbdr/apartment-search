@@ -177,6 +177,7 @@ h1 { font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.08; letter-spacing: -.
 .listing-card h3 svg { flex: 0 0 auto; align-self: center; color: var(--green); }
 .listing-location, .listing-notes { color: var(--muted); font-size: .86rem; line-height: 1.45; }
 .listing-notes { white-space: pre-wrap; }
+.listing-availability { color: var(--muted); font-size: .75rem; line-height: 1.4; }
 .listing-rent { font-weight: 700; font-variant-numeric: tabular-nums; }
 .listing-rent span { font-size: .8rem; font-weight: 400; color: var(--muted); }
 

@@ -62,3 +62,13 @@ Database policies restrict the board to the approved members. The commute map is
 Daily searches use up to 24 saved apartments as preference examples, prioritizing **Applied**, **Visited**, **Contacted**, then **Interested**, with recent updates first within each stage. The model looks for similar neighborhoods, rents, bedrooms, bathrooms, and floor areas within your saved search filters. Trashed, denied, and unaccepted suggestions are excluded from preference examples. All previously saved listings are excluded from new results. Only these property attributes and interest weights are sent as examples. The search refreshes its examples from the board on every run.
 
 [OpenAI Web Search](https://developers.openai.com/api/docs/guides/tools-web-search) · [Vercel Cron Jobs](https://vercel.com/docs/schedules/cron-jobs/manage-cron-jobs)
+
+## Nightly availability cleanup
+
+The shared board checks every saved listing outside Trash around 11 p.m. Pacific, including Suggestions. Two daily Vercel schedules cover daylight saving time. The endpoint checks the local hour and each listing's last check date so only one pass applies per night.
+
+Confirmed removals move to Trash and disappear from the active stacks and map. The listing retains its original stage, notes, and details. Open Trash to see the provider result and date, or restore it for review. Restored listings are eligible for the next night's check. Inaccessible pages, redirects to unrelated pages, provider blocks, timeouts, and ambiguous results stay visible with an unconfirmed availability label.
+
+Apply `20261118010000_add_availability_checks.sql` before deploying this version. The cleanup uses the existing `CRON_SECRET`, Supabase URL, and server-only Supabase key. It checks provider HTTP responses, explicit removal headings, and structured availability attached to the exact listing. It works independently of the daily suggestions setting and uses no OpenAI calls. Provider pages that need JavaScript or block server requests may stay unconfirmed.
+
+The scan records each result as it completes, and concurrent edits take precedence over a scan result. It checks up to four listings concurrently within Vercel's five-minute limit. A partial scan returns an error status for visibility in Vercel logs. A repeat invocation during the cleanup hour resumes unchecked listings.

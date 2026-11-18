@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { conflictError, duplicateError } from './listings.js';
 
 export const storageKey = 'brooklyn-apartment-search:listings:v1';
-const columns = 'id,source,source_key,url,title,neighborhood,monthly_rent,bedrooms,bathrooms,square_feet,image_url,notes,status,trashed_at,street_address,latitude,longitude,created_at,updated_at';
+const columns = 'id,source,source_key,url,title,neighborhood,monthly_rent,bedrooms,bathrooms,square_feet,image_url,notes,status,trashed_at,availability_status,availability_reason,availability_checked_at,street_address,latitude,longitude,created_at,updated_at';
 const searchColumns = 'enabled,neighborhoods,max_rent,min_bedrooms';
 
 function browserStorageError() {
