@@ -1,0 +1,7 @@
+{
+  "crons": [{ "path": "/api/find-listings", "schedule": "0 15 * * *" }],
+  "functions": {
+    "api/lookup-listing.js": { "maxDuration": 60 },
+    "api/find-listings.js": { "maxDuration": 60 }
+  }
+}
