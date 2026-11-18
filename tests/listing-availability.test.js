@@ -44,6 +44,23 @@ test('blocks, related listings, conflicting signals and unclear pages stay uncon
   assert.equal(pageAvailability(offerPage(url, 'https://schema.org/OutOfStock'), 200, url).status, 'removed');
 });
 
+test('StreetEasy nested offers are matched to the current unit and ignore other units and history', () => {
+  const html = '<script type="application/ld+json">' + JSON.stringify({
+    '@graph': [{
+      '@type': 'ItemPage',
+      about: {
+        '@type': 'RealEstateListing',
+        offers: { url, availability: 'https://schema.org/InStock' },
+      },
+    }, {
+      '@type': 'RealEstateListing',
+      offers: { url: 'https://streeteasy.com/rental/7654321', availability: 'https://schema.org/OutOfStock' },
+    }],
+  }) + '</script><p>Price history — No longer available — 2015</p>';
+  assert.equal(pageAvailability(html, 200, url).status, 'active');
+  assert.equal(pageAvailability(html.replace('InStock', 'OutOfStock'), 200, url).status, 'removed');
+});
+
 test('provider requests allow redirects only to the same listing', async () => {
   const visited = [];
   const result = await checkListingAvailability(url, async (target, options) => {

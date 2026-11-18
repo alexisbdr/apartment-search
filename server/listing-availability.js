@@ -48,11 +48,17 @@ function structuredAvailability(html, url) {
     } catch {
       continue;
     }
-    const nodes = Array.isArray(data) ? data : [data];
-    for (const node of nodes.flatMap(item => item?.['@graph'] ?? [item])) {
-      if (!node || !sameListing(node.url ?? node['@id'], url)) continue;
+    const nodes = Array.isArray(data) ? [...data] : [data];
+    while (nodes.length) {
+      const node = nodes.pop();
+      if (!node || typeof node !== 'object') continue;
+      for (const name of ['@graph', 'about', 'mainEntity', 'offers']) {
+        if (node[name]) nodes.push(...[node[name]].flat());
+      }
+      if (!sameListing(node.url ?? node['@id'], url)) continue;
       const offers = node.offers ? [node.offers].flat() : [node];
       for (const offer of offers) {
+        if (offer?.url && !sameListing(offer.url, url)) continue;
         const status = String(offer?.availability ?? '').replace(/^https?:\/\/schema.org\//, '');
         if (['Discontinued', 'OutOfStock', 'SoldOut'].includes(status)) states.push('removed');
         if (['InStock', 'LimitedAvailability', 'PreOrder'].includes(status)) states.push('active');
