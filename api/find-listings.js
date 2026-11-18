@@ -1,13 +1,6 @@
-import { timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { findSuggestions } from '../server/openai-listings.js';
-
-function isScheduled(request, secret) {
-  if (!secret) return false;
-  const actual = Buffer.from(request.headers.get('Authorization') ?? '');
-  const expected = Buffer.from('Bearer ' + secret);
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
-}
+import { isScheduled } from '../server/scheduled.js';
 
 export async function GET(request) {
   const { CRON_SECRET, VITE_SUPABASE_URL, OPENAI_API_KEY, SUPABASE_SECRET_KEY, SUPABASE_SERVICE_ROLE_KEY } = process.env;

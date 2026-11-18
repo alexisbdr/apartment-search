@@ -1,7 +1,12 @@
 {
-  "crons": [{ "path": "/api/find-listings", "schedule": "0 15 * * *" }],
+  "crons": [
+    { "path": "/api/find-listings", "schedule": "0 15 * * *" },
+    { "path": "/api/check-listings", "schedule": "0 6 * * *" },
+    { "path": "/api/check-listings", "schedule": "0 7 * * *" }
+  ],
   "functions": {
     "api/lookup-listing.js": { "maxDuration": 60 },
-    "api/find-listings.js": { "maxDuration": 60 }
+    "api/find-listings.js": { "maxDuration": 60 },
+    "api/check-listings.js": { "maxDuration": 300 }
   }
 }
