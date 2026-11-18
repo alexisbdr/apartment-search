@@ -52,6 +52,7 @@ export function SearchSettings({ store }) {
     <summary>Daily search preferences</summary>
     {loading && <p role="status">Loading preferences…</p>}
     {settings && <form onSubmit={save}>
+      <p className="search-feedback">Matches learn from your saved listings, with more weight on places you’ve visited or applied to. Your budget and search filters still apply.</p>
       <fieldset disabled={saving} className="listing-fields">
         <label className="check-label span-two">
           <input type="checkbox" name="enabled" defaultChecked={settings.enabled} /> Send daily matches to Suggestions

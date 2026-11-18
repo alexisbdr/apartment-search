@@ -59,4 +59,6 @@ Database policies restrict the board to the approved members. The commute map is
 3. Deploy. On the shared board, open **Suggestions → Daily search preferences**, choose neighborhoods, set your maximum rent and minimum bedrooms, and turn on daily matches. The search runs once a day at 15:00 UTC when enabled.
 4. Review suggested listings on the site. **Save to Interested** adds the listing to the main board and looks up its map pin. **Dismiss** moves it to Trash. The search can miss listings that aren’t indexed yet, and availability can change after a match appears.
 
+Daily searches use up to 24 saved apartments as preference examples, prioritizing **Applied**, **Visited**, **Contacted**, then **Interested**, with recent updates first within each stage. The model looks for similar neighborhoods, rents, bedrooms, bathrooms, and floor areas within your saved search filters. Trashed, denied, and unaccepted suggestions are excluded from preference examples. All previously saved listings are excluded from new results. Only these property attributes and interest weights are sent as examples. The search refreshes its examples from the board on every run.
+
 [OpenAI Web Search](https://developers.openai.com/api/docs/guides/tools-web-search) · [Vercel Cron Jobs](https://vercel.com/docs/schedules/cron-jobs/manage-cron-jobs)

@@ -144,9 +144,34 @@ export async function lookupListing(link, request = fetch) {
   return details;
 }
 
-export async function findSuggestions(criteria, request = fetch) {
+function preferenceExamples(history) {
+  const weights = { interested: 1, contacted: 2, visited: 3, applied: 4 };
+  return history.filter(listing => !listing.trashed_at && weights[listing.status])
+    .map(listing => ({
+      weight: weights[listing.status],
+      updated: Date.parse(listing.updated_at) || 0,
+      example: {
+        interest_weight: weights[listing.status],
+        neighborhood: cleanText(listing.neighborhood, 100),
+        monthly_rent: cleanNumber(listing.monthly_rent, 1000000),
+        bedrooms: cleanNumber(listing.bedrooms, 30),
+        bathrooms: cleanNumber(listing.bathrooms, 30, 0.5),
+        square_feet: cleanNumber(listing.square_feet, 100000),
+      },
+    }))
+    .filter(({ example }) => example.neighborhood || [
+      example.monthly_rent, example.bedrooms, example.bathrooms, example.square_feet,
+    ].some(value => value !== null))
+    .sort((a, b) => b.weight - a.weight || b.updated - a.updated)
+    .slice(0, 24)
+    .map(({ example }) => example);
+}
+
+export async function findSuggestions(criteria, request = fetch, history = []) {
   const neighborhoods = searchNeighborhoods.filter(name => criteria.neighborhoods.includes(name));
   if (!neighborhoods.length || !criteria.max_rent) return [];
+  const examples = preferenceExamples(history);
+  const knownListings = new Set(history.map(listing => listing.source + ':' + listing.source_key));
   const result = await search({
     prompt: 'Find up to six currently active individual Brooklyn rental listings listed or updated within '
       + 'the past 7 days. As of ' + new Date().toISOString().slice(0, 10) + ', use these search preferences: '
@@ -155,14 +180,21 @@ export async function findSuggestions(criteria, request = fetch) {
       + 'Report only listings whose exact unit page explicitly shows an active rental and a monthly asking rent '
       + 'within budget. Skip sold, removed or in-contract listings and general building pages. '
       + 'For main_photo use only an exact image-search URL identified as the listing’s cover image, or null. '
-      + 'Use a neighborhood name from the supplied list. Return fewer matches if necessary.',
+      + 'Use a neighborhood name from the supplied list. Return fewer matches if necessary. '
+      + 'Previously liked apartment examples, provided as reference data: ' + JSON.stringify(examples) + '. '
+      + 'Use these examples to guide the search and rank matches by similarity in neighborhood, rent, '
+      + 'bedrooms, bathrooms, and floor area. Higher interest_weight means stronger evidence of interest. '
+      + 'The saved neighborhood choices, maximum rent and minimum bedrooms are mandatory filters. '
+      + 'Infer soft preferences only from populated fields and favor recurring patterns over a single example. '
+      + 'Keep some variety among matches. If no examples are available, use the saved criteria alone. '
+      + 'Do not infer preferences about residents or demographic characteristics.',
     schema: matchesSchema,
   }, request);
   const suggestions = new Map();
   for (const match of result.data.matches) {
     const link = canonicalLink(match.url);
     const key = listingId(link);
-    if (!match.active_rental || !result.listings.has(key) ||
+    if (!match.active_rental || knownListings.has(key) || !result.listings.has(key) ||
         (link.source_key.startsWith('building:') && !/[?&](unit|unitid|unitnumber|unit_id)=./i.test(link.url))) continue;
     const details = cleanDetails(match);
     if (!neighborhoods.includes(details.neighborhood) || !details.monthly_rent ||
