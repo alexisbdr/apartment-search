@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { listingDraft, listingLink } from '../src/listings.js';
+import { activeListing, listingDraft, listingLink } from '../src/listings.js';
 import { browserStore } from '../src/storage.js';
 
 test('StreetEasy links normalize tracking and trailing slashes', () => {
@@ -34,9 +34,26 @@ test('optional values stay optional and zero bedrooms means a studio', () => {
   const row = listingDraft(fields);
   assert.equal(row.bedrooms, 0);
   assert.equal(row.monthly_rent, null);
+  assert.equal(row.bathrooms, null);
+  assert.equal(row.square_feet, null);
   assert.equal(row.notes, 'Check the walk');
   fields.set('monthly_rent', '3200.25');
   assert.throws(() => listingDraft(fields), /whole number/);
+});
+
+test('listing drafts support a half bath, floor area, and a provider photo', () => {
+  const fields = new URLSearchParams({
+    url: 'https://streeteasy.com/rental/1234567',
+    bathrooms: '1.5',
+    square_feet: '720',
+    image_url: 'https://photos.zillowstatic.com/apartment.jpg',
+  });
+  const draft = listingDraft(fields);
+  assert.equal(draft.bathrooms, 1.5);
+  assert.equal(draft.square_feet, 720);
+  assert.equal(draft.image_url, fields.get('image_url'));
+  fields.set('image_url', 'https://photos.zillowstatic.com.example.com/apartment.jpg');
+  assert.throws(() => listingDraft(fields), /photo link/);
 });
 
 test('browser board persists stages and rejects duplicate and stale writes', async () => {
@@ -50,7 +67,15 @@ test('browser board persists stages and rejects duplicate and stale writes', asy
   const contacted = await store.update(interested, { status: 'contacted' });
   assert.equal((await browserStore(storage).list())[0].status, 'contacted');
   await assert.rejects(store.update(interested, { status: 'applied' }), /changed/);
-  const applied = await store.update(contacted, { status: 'applied' });
+  const visited = await store.update(contacted, { status: 'visited' });
+  const trashed = await store.update(visited, { trashed_at: '2026-11-18T00:00:00Z' });
+  assert.equal(activeListing((await browserStore(storage).list())[0]), false);
+  await assert.rejects(store.add(draft), /already/);
+  const restored = await store.update(trashed, { trashed_at: null });
+  assert.equal(restored.status, 'visited');
+  assert.equal(activeListing(restored), true);
+  assert.equal(activeListing({ status: 'suggested' }), false);
+  const applied = await store.update(restored, { status: 'applied' });
   const denied = await store.update(applied, { status: 'denied' });
   assert.equal((await store.list())[0].status, 'denied');
   await store.remove(denied);

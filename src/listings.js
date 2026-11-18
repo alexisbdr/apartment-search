@@ -1,12 +1,14 @@
 export const stages = [
   { key: 'interested', label: 'Interested', statuses: ['interested'] },
   { key: 'contacted', label: 'Contacted', statuses: ['contacted'] },
+  { key: 'visited', label: 'Visited', statuses: ['visited'] },
   { key: 'applications', label: 'Applied / Denied', statuses: ['applied', 'denied'] },
 ];
 
 export const statuses = [
   ['interested', 'Interested'],
   ['contacted', 'Contacted'],
+  ['visited', 'Visited'],
   ['applied', 'Applied'],
   ['denied', 'Denied'],
 ];
@@ -69,6 +71,21 @@ export function listingLink(input) {
   };
 }
 
+export function listingPhoto(input) {
+  const value = String(input ?? '').trim();
+  if (!value || value.length > 2048 || !URL.canParse(value)) return '';
+  const url = new URL(value);
+  if (
+    url.protocol !== 'https:' || url.username || url.password || url.port ||
+    !['photos.zillowstatic.com', 'cdn-img.streeteasy.com', 'photos.streeteasy.com'].includes(url.hostname)
+  ) return '';
+  return url.href;
+}
+
+export function activeListing(listing) {
+  return !listing.trashed_at && listing.status !== 'suggested';
+}
+
 function optionalInteger(fields, name, label, max) {
   const value = String(fields.get(name) ?? '').trim();
   if (!value) return null;
@@ -81,6 +98,14 @@ function optionalInteger(fields, name, label, max) {
 
 export function listingDraft(fields) {
   const link = listingLink(fields.get('url'));
+  const bathText = String(fields.get('bathrooms') ?? '').trim();
+  const bathrooms = bathText ? Number(bathText) : null;
+  if (bathText && (!/^\d+(?:\.[05])?$/.test(bathText) || bathrooms > 30)) {
+    throw new Error('Bathrooms must be between 0 and 30, in half-bath increments.');
+  }
+  const photo = String(fields.get('image_url') ?? '').trim();
+  const image_url = listingPhoto(photo);
+  if (photo && !image_url) throw new Error('Use a direct StreetEasy or Zillow photo link.');
   return {
     ...link,
     title: String(fields.get('title') ?? '').trim(),
@@ -88,6 +113,9 @@ export function listingDraft(fields) {
     street_address: String(fields.get('street_address') ?? '').trim(),
     monthly_rent: optionalInteger(fields, 'monthly_rent', 'Monthly rent', 1000000),
     bedrooms: optionalInteger(fields, 'bedrooms', 'Bedrooms', 30),
+    bathrooms,
+    square_feet: optionalInteger(fields, 'square_feet', 'Square feet', 100000),
+    image_url,
     notes: String(fields.get('notes') ?? '').trim(),
   };
 }
@@ -110,5 +138,5 @@ export function conflictError() {
 }
 
 export function duplicateError() {
-  return new Error('That listing is already on the board.');
+  return new Error('That listing is already saved. Check the board, Suggestions, or Trash.');
 }

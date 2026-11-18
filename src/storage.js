@@ -2,7 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { conflictError, duplicateError } from './listings.js';
 
 export const storageKey = 'brooklyn-apartment-search:listings:v1';
-const columns = 'id,source,source_key,url,title,neighborhood,monthly_rent,bedrooms,notes,status,street_address,latitude,longitude,created_at,updated_at';
+const columns = 'id,source,source_key,url,title,neighborhood,monthly_rent,bedrooms,bathrooms,square_feet,image_url,notes,status,trashed_at,street_address,latitude,longitude,created_at,updated_at';
+const searchColumns = 'enabled,neighborhoods,max_rent,min_bedrooms';
 
 function browserStorageError() {
   return new Error('The browser could not save or read listings. Check that site storage is enabled.');
@@ -113,6 +114,13 @@ export function sharedStore(client) {
     },
     async add(draft) {
       return databaseResult(await client.from('listings').insert(draft).select(columns).single());
+    },
+    async getSearch() {
+      return databaseResult(await client.from('board_search').select(searchColumns).single());
+    },
+    async saveSearch(settings) {
+      return databaseResult(await client.from('board_search').update(settings).eq('id', 1)
+        .select(searchColumns).single());
     },
     async update(listing, changes) {
       const row = databaseResult(await client.from('listings').update(changes)
