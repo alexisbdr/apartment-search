@@ -67,7 +67,26 @@ export function findBrooklynAddress(address, features) {
   return candidates.size === 1 ? candidates.values().next().value : null;
 }
 
-export async function listingLocation(address, previous, fetchAddress = fetch) {
+export function findCensusAddress(address, matches) {
+  const requested = streetAddressOnly(address).match(/^(\d+[a-z]?(?:-\d+[a-z]?)?)\s+(.+)$/i);
+  if (!requested || !Array.isArray(matches)) return null;
+  const candidates = new Map();
+  for (const match of matches) {
+    const parts = match.addressComponents;
+    const matchedStreet = match.matchedAddress?.split(',')[0].trim().match(/^(\d+[a-z]?(?:-\d+[a-z]?)?)\s+(.+)$/i);
+    const longitude = match.coordinates?.x;
+    const latitude = match.coordinates?.y;
+    if (parts?.city !== 'BROOKLYN' || parts.state !== 'NY' || !matchedStreet ||
+        matchedStreet[1].toLowerCase() !== requested[1].toLowerCase() ||
+        equivalentStreet(matchedStreet[2]) !== equivalentStreet(requested[2]) ||
+        !Number.isFinite(longitude) || !Number.isFinite(latitude) ||
+        longitude < -74.1 || longitude > -73.8 || latitude < 40.55 || latitude > 40.75) continue;
+    candidates.set(longitude.toFixed(5) + ',' + latitude.toFixed(5), { longitude, latitude });
+  }
+  return candidates.size === 1 ? candidates.values().next().value : null;
+}
+
+export async function listingLocation(address, previous, fetchAddress = fetch, fallbackLocation) {
   if (previous?.street_address === address && Number.isFinite(previous.latitude) && Number.isFinite(previous.longitude)) {
     return { latitude: previous.latitude, longitude: previous.longitude };
   }
@@ -88,6 +107,16 @@ export async function listingLocation(address, previous, fetchAddress = fetch) {
       }
     } catch {
       // Keep the listing usable if the address service is unavailable.
+    }
+  }
+  if (street && !outsideBrooklyn && fallbackLocation) {
+    try {
+      const result = await fallbackLocation(street);
+      if (Number.isFinite(result?.latitude) && Number.isFinite(result?.longitude) &&
+          result.latitude >= 40.55 && result.latitude <= 40.75 &&
+          result.longitude >= -74.1 && result.longitude <= -73.8) return result;
+    } catch {
+      // Keep the listing usable if the fallback address service is unavailable.
     }
   }
   return { latitude: null, longitude: null };

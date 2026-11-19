@@ -121,3 +121,44 @@ test('only an exact Brooklyn house number and street gets a pin', async () => {
     latitude: null, longitude: null,
   });
 });
+
+test('Census fallback matches 817 Classon and rejects nearby addresses and other boroughs', async () => {
+  const { findCensusAddress } = await import('../src/locations.js');
+  const match = {
+    matchedAddress: '817 CLASSON AVE, BROOKLYN, NY, 11238',
+    addressComponents: { city: 'BROOKLYN', state: 'NY' },
+    coordinates: { x: -73.960796163697, y: 40.672667738766 },
+  };
+  assert.deepEqual(findCensusAddress('817 Classon Avenue, Apt 105', [match]), {
+    longitude: match.coordinates.x, latitude: match.coordinates.y,
+  });
+  assert.equal(findCensusAddress('819 Classon Avenue', [match]), null);
+  assert.equal(findCensusAddress('817 Classon Avenue', [{
+    ...match, addressComponents: { city: 'NEW YORK', state: 'NY' },
+  }]), null);
+  assert.equal(findCensusAddress('817 Classon Avenue', [
+    match, { ...match, coordinates: { x: -73.961, y: 40.673 } },
+  ]), null);
+});
+
+test('saving a listing uses the fallback only when the city cannot resolve its address', async () => {
+  const { listingLocation } = await import('../src/locations.js');
+  const expected = { longitude: -73.960796163697, latitude: 40.672667738766 };
+  const result = await listingLocation('817 Classon Avenue', null, async () => ({
+    ok: true,
+    json: async () => ({ features: [{
+      properties: { borough: 'Brooklyn', housenumber: '594', street: 'CLASSON AVENUE' },
+      geometry: { type: 'Point', coordinates: [-73.95878, 40.679487] },
+    }] }),
+  }), async address => {
+    assert.equal(address, '817 Classon Avenue');
+    return expected;
+  });
+  assert.deepEqual(result, expected);
+  assert.deepEqual(await listingLocation('817 Classon Avenue',
+    { street_address: '817 Classon Avenue', ...expected },
+    () => assert.fail('Saved coordinates should be reused'),
+    () => assert.fail('Saved coordinates should be reused')), expected);
+  assert.deepEqual(await listingLocation('817 Classon Avenue', null, async () => { throw new Error('offline'); },
+    async () => { throw new Error('offline'); }), { latitude: null, longitude: null });
+});

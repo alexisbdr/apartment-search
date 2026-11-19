@@ -15,6 +15,8 @@ Click **Add listing** and paste an individual StreetEasy or Zillow property link
 
 Listings with matched addresses appear on **Commute map** as soon as they are saved. Click a pin for a small listing pop-up or use **View on map** from a card to go directly to it. The app looks up Brooklyn street addresses using [NYC Planning GeoSearch](https://geosearch.planninglabs.nyc/docs/). It can suggest a location from a link when the link contains a numbered street address. Listings outside the map coverage or without a matched address remain on the board. To place a pin for an existing listing, edit its street address and save.
 
+On the shared board, address lookups also try the [U.S. Census Geocoder](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html/) when NYC Planning returns no matching address. The fallback requires a single matching Brooklyn house number and street. Census coordinates are estimated along the street address range. To retry an existing listing without a pin, open its edit form and save it.
+
 By default the board saves in the current browser. The map works without a database and is bundled in `public/commute-map.html`. When a listing has a photo URL, its pin pop-up shows the photo. Duplicate detection uses the provider listing ID or building and unit where the URL contains it.
 
 ```sh

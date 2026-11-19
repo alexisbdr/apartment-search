@@ -59,7 +59,7 @@ function ListingCard({ listing, canEdit, onEdit, onMove, actions }) {
       {onMove && (isMapped(listing) ? (
         <a className="pin-link" href={'#map/' + listing.id}><MapPin size={15} aria-hidden="true" /> View on map</a>
       ) : <p className="pin-missing">{listing.street_address
-        ? (Number.isFinite(listing.latitude) ? 'Outside commute map coverage' : 'Edit the street address to retry the pin')
+        ? (Number.isFinite(listing.latitude) ? 'Outside commute map coverage' : 'Edit and save to retry the map pin')
         : 'Add a street address to place a pin'}</p>)}
       {onMove && <div className="status-control">
         <select aria-label={'Status for ' + title} value={listing.status}
@@ -192,7 +192,7 @@ function ListingDialog({ listing, pending, lookup, onClose, onSave, onRemove }) 
             Brooklyn street address
             <input name="street_address" maxLength={200} defaultValue={listing?.street_address}
               placeholder="e.g. 200 Lafayette Ave" />
-            <span className="optional">The app looks up the address with NYC Planning when you save.</span>
+            <span className="optional">The map pin is looked up when you save.</span>
           </label>
           <label className="span-two">
             Neighborhood
@@ -283,7 +283,7 @@ function ListingDrawer({ view, rows, disabled, store, onClose, onUpdate }) {
   </dialog>;
 }
 
-export function Board({ board, onSignOut, lookup }) {
+export function Board({ board, onSignOut, lookup, fallbackLocation }) {
   const { listings, loaded, loadError, pending, refresh, mutate, store } = board;
   const [actionError, setActionError] = useState('');
   const [dialog, setDialog] = useState(null);
@@ -297,7 +297,7 @@ export function Board({ board, onSignOut, lookup }) {
     setActionError('');
     await mutate(async () => {
       const address = draft.street_address || (!listing ? addressFromLink(draft.url) : '');
-      const location = await listingLocation(address, listing);
+      const location = await listingLocation(address, listing, fetch, fallbackLocation);
       const record = { ...draft, street_address: address, ...location };
       if (listing && listing.url !== draft.url) {
         record.availability_status = 'unknown';
@@ -325,7 +325,7 @@ export function Board({ board, onSignOut, lookup }) {
         availability_checked_at: new Date().toISOString(),
       });
       const address = listing.street_address || addressFromLink(listing.url);
-      const location = await listingLocation(address, listing);
+      const location = await listingLocation(address, listing, fetch, fallbackLocation);
       return store.update(listing, { status: 'interested', street_address: address, ...location });
     }, (rows, updated) => rows.map(row => row.id === updated.id ? updated : row));
   }

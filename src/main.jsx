@@ -77,6 +77,17 @@ function SharedBoard({ client, store, route }) {
   const [signOutError, setSignOutError] = useState('');
   const memberId = session?.user.id;
   const lookup = useCallback((url, signal) => fetchListingDetails(client, url, signal), [client]);
+  const fallbackLocation = useCallback(async address => {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) return null;
+    const response = await fetch('/api/geocode-address', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address }),
+      signal: AbortSignal.timeout(12000),
+    });
+    return response.ok ? response.json() : null;
+  }, [client]);
 
   useEffect(() => {
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, current) => setSession(current));
@@ -131,7 +142,8 @@ function SharedBoard({ client, store, route }) {
 
   return <>
     {signOutError && <p className="notice error-text" role="alert">{signOutError}</p>}
-    <Workspace key={memberId} store={store} route={route} onSignOut={signOut} lookup={lookup} />
+    <Workspace key={memberId} store={store} route={route} onSignOut={signOut} lookup={lookup}
+      fallbackLocation={fallbackLocation} />
   </>;
 }
 
@@ -190,11 +202,11 @@ function CommuteMap({ listings = emptyListings, focusListingId, signInRequired }
   );
 }
 
-function Workspace({ store, route, onSignOut, lookup }) {
+function Workspace({ store, route, onSignOut, lookup, fallbackLocation }) {
   const board = useBoard(store);
   return route.view === 'map'
     ? <CommuteMap listings={board.listings} focusListingId={route.listingId} />
-    : <Board board={board} onSignOut={onSignOut} lookup={lookup} />;
+    : <Board board={board} onSignOut={onSignOut} lookup={lookup} fallbackLocation={fallbackLocation} />;
 }
 
 function currentRoute() {
